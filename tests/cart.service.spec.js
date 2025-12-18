@@ -100,3 +100,50 @@ describe('Cart Service - Step 2 Apple Buy 1 Get 1 Offer', () => {
   });
 
 });
+
+
+describe('Cart Service - Step 3 Orange Buy 2 Get 3 Offer', () => {
+
+  const calculateCartTotal = require('../src/cart.service');
+
+  test('should charge Rs.40 for 5 oranges with buy 2 get 3 offer', () => {
+    const cartItems = [
+      { productId: 'ORANGE', quantity: 5 }
+    ];
+
+    const total = calculateCartTotal(cartItems);
+
+    expect(total).toBe(40);
+  });
+
+  test('should charge Rs.60 for 6 oranges with buy 2 get 3 offer', () => {
+    const cartItems = [
+      { productId: 'ORANGE', quantity: 6 }
+    ];
+
+    const total = calculateCartTotal(cartItems);
+
+    expect(total).toBe(60);
+  });
+
+  test('should charge Rs.60 for 10 oranges with buy 2 get 3 offer', () => {
+    const cartItems = [
+      { productId: 'ORANGE', quantity: 10 }
+    ];
+
+    const total = calculateCartTotal(cartItems);
+
+    expect(total).toBe(60);
+  });
+
+  test('should charge Rs.80 for 11 oranges with buy 2 get 3 offer', () => {
+    const cartItems = [
+      { productId: 'ORANGE', quantity: 11 }
+    ];
+
+    const total = calculateCartTotal(cartItems);
+
+    expect(total).toBe(80);
+  });
+
+});
