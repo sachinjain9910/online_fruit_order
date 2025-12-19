@@ -9,4 +9,13 @@ function handleUserRegistered(event) {
   });
 }
 
-module.exports = { handleUserRegistered };
+function deductBalance(userId, amount) {
+  // real implementation later
+}
+
+module.exports = {
+  handleUserRegistered,
+  deductBalance
+};
+
+
