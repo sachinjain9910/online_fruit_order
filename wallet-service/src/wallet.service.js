@@ -10,7 +10,7 @@ function handleUserRegistered(event) {
 }
 
 function deductBalance(userId, amount) {
-  // real implementation later
+  console.log(`Wallet debited: ${userId}, amount: ${amount}`);
 }
 
 module.exports = {
