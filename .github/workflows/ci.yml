@@ -44,3 +44,7 @@ jobs:
       - name: Run Tests
         working-directory: ${{ matrix.service }}
         run: npm test
+      
+      - name: Build Docker image
+        working-directory: ${{ matrix.service }}
+        run: docker build -t ${{ matrix.service }}:latest .
