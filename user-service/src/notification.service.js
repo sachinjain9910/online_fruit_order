@@ -1,12 +1,9 @@
 function sendSMS(userId, message) {
-  // external integration would go here
+  console.log(`SMS sent to ${userId}: ${message}`);
 }
 
 function sendEmail(userId, message) {
-  // external integration would go here
+  console.log(`Email sent to ${userId}: ${message}`);
 }
 
-module.exports = {
-  sendSMS,
-  sendEmail
-};
+module.exports = { sendSMS, sendEmail };
