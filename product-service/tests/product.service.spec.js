@@ -1,4 +1,4 @@
-const sortProducts = require('../src/product.service');
+const {sortProducts} = require('../src/product.service');
 
 describe('Product Service - Step 4 Sorting', () => {
 
