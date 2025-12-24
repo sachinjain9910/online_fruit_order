@@ -1,6 +1,6 @@
 ****** ONLINE FRUIT ORDERING SYSTEM ******
 
-This project is a microservices-based online fruit ordering system built using Node.js, Express, Docker, and GitLab CI/CD.
+This project is a microservices-based online fruit ordering system built using Node.js, Express, Docker, and GitHub CI/CD.
 It demonstrates real-world backend architecture concepts including service separation, event-driven communication, containerization, testing, and CI/CD pipelines.
 
 ****** PROJECT OVERVIEW ******
@@ -106,7 +106,7 @@ Backend: Node.js, Express.js
 Testing: Jest
 Code Quality: ESLint
 Containerization: Docker, Docker Compose
-CI/CD: GitLab CI/CD, GitLab Container Registry
+CI/CD: GitHub CI/CD, GitHub Container Registry
 
 
 ****** DOCKER SETUP ******
@@ -134,7 +134,7 @@ To run tests: npm test
 
 ****** CI/CD PIPELINE ******
 
-The project includes a full CI pipeline and a mock CD pipeline using GitLab CI.
+The project includes a full CI pipeline and a mock CD pipeline using GitHub CI.
 
 Pipeline stages:
 
@@ -146,6 +146,6 @@ Security Scan
 Runs npm audit for dependency vulnerabilities
 Docker Build & Push
 Builds Docker image
-Pushes image to GitLab Container Registry
+Pushes image to GitHub Container Registry
 Mock Deployment
 Simulates deployment to AWS (no AWS account required)
