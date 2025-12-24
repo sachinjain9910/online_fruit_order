@@ -1,42 +1,61 @@
-const { checkout } = require('../src/order.service');
-const walletService = require('../../wallet-service/src/wallet.service');
-const eventBus = require('../src/event-bus');
+jest.mock('axios', () => ({
+  post: jest.fn()
+}));
 
-jest.mock('../../wallet-service/src/wallet.service');
-jest.mock('../src/event-bus');
+jest.mock('../src/event-bus', () => ({
+  publish: jest.fn()
+}));
+
+const axios = require('axios');
+const eventBus = require('../src/event-bus');
+const { checkout } = require('../src/order.service');
 
 describe('Order Service - Checkout', () => {
 
-     beforeEach(() => {
+  beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test('should deduct wallet balance and send confirmation when paid by wallet', () => {
-    checkout({
+  test('should call wallet service and publish event when paid by wallet', async () => {
+    axios.post.mockResolvedValue({ data: { success: true } });
+
+    await checkout({
       userId: 'U1',
       amount: 50,
       paymentMethod: 'WALLET'
     });
 
-    expect(walletService.deductBalance).toHaveBeenCalledWith('U1', 50);
+    expect(axios.post).toHaveBeenCalledWith(
+      'http://wallet-service:3000/wallet/deduct',
+      { userId: 'U1', amount: 50 }
+    );
+
     expect(eventBus.publish).toHaveBeenCalledWith(
       'OrderPlaced',
-      expect.objectContaining({ userId: 'U1', amount: 50 })
+      expect.objectContaining({
+        userId: 'U1',
+        amount: 50,
+        paymentMethod: 'WALLET'
+      })
     );
   });
 
-  test('should not deduct wallet balance when paid by credit card', () => {
-    checkout({
+  test('should not call wallet service when paid by credit card', async () => {
+    await checkout({
       userId: 'U2',
       amount: 100,
       paymentMethod: 'CREDIT_CARD'
     });
 
-    expect(walletService.deductBalance).not.toHaveBeenCalled();
+    expect(axios.post).not.toHaveBeenCalled();
+
     expect(eventBus.publish).toHaveBeenCalledWith(
       'OrderPlaced',
-      expect.objectContaining({ userId: 'U2', amount: 100 })
+      expect.objectContaining({
+        userId: 'U2',
+        amount: 100,
+        paymentMethod: 'CREDIT_CARD'
+      })
     );
   });
-
 });
