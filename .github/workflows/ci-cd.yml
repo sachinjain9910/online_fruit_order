@@ -1,0 +1,135 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: 🧪 Run Unit Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service:
+          - cart-service
+          - order-service
+          - product-service
+          - user-service
+          - wallet-service
+          - notification-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          cd ${{ matrix.service }}
+          npm install
+
+      - name: Run tests
+        run: |
+          cd ${{ matrix.service }}
+          npm test
+
+  static_analysis:
+    name: 🧹 ESLint
+    runs-on: ubuntu-latest
+    needs: test
+
+    strategy:
+      matrix:
+        service:
+          - cart-service
+          - order-service
+          - product-service
+          - user-service
+          - wallet-service
+          - notification-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - run: |
+          cd ${{ matrix.service }}
+          npm install
+          npx eslint . || true
+
+  security_scan:
+    name: 🔐 Security Scan
+    runs-on: ubuntu-latest
+    needs: static_analysis
+
+    strategy:
+      matrix:
+        service:
+          - cart-service
+          - order-service
+          - product-service
+          - user-service
+          - wallet-service
+          - notification-service
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - run: |
+          cd ${{ matrix.service }}
+          npm install
+          npm audit --audit-level=high || true
+
+  docker_build:
+    name: 🐳 Build Docker Image
+    runs-on: ubuntu-latest
+    needs: security_scan
+    if: github.ref == 'refs/heads/main'
+
+    strategy:
+      matrix:
+        service:
+          - cart-service
+          - order-service
+          - product-service
+          - user-service
+          - wallet-service
+          - notification-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and Push
+        run: |
+          cd ${{ matrix.service }}
+          docker build -t ghcr.io/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }} .
+          docker push ghcr.io/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }}
+
+  deploy:
+    name: 🚀 Mock Deploy
+    runs-on: ubuntu-latest
+    needs: docker_build
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Mock Deployment
+        run: |
+          echo "🚀 Deploying application (mock)"
+          echo "Pulling image from registry"
+          echo "Starting containers"
+          echo "✅ Deployment completed"
