@@ -1,113 +1,100 @@
 stages:
   - install
   - test
+  - lint
   - build
   - scan
   - deploy
 
-default:
-  image: node:18-alpine
-  before_script:
-    - apk add --no-cache git
-    - echo "Service: $SERVICE_NAME"
-
-# Detect services affected by the latest commit
 variables:
+  DOCKER_TLS_CERTDIR: ""
   SERVICES: "cart-service product-service user-service order-service notification-service"
 
-.install_template: &install
+# -------- Install Dependencies --------
+install:
   stage: install
+  image: node:18-alpine
   script:
-    - cd $SERVICE_NAME
-    - npm ci
+    - for SVC in $SERVICES; do
+        echo "Installing for $SVC" &&
+        cd $SVC && npm ci && cd ..;
+      done
   artifacts:
     paths:
-      - $SERVICE_NAME/node_modules/
+      - **/node_modules/
     expire_in: 1h
 
-.test_template: &test
+# -------- Run Tests --------
+test:
   stage: test
+  image: node:18-alpine
+  needs: ["install"]
   script:
-    - cd $SERVICE_NAME
-    - npm run test -- --ci --reporters=default --reporters=jest-junit --coverage
+    - npm install -g jest-junit
+    - for SVC in $SERVICES; do
+        echo "Testing $SVC" &&
+        cd $SVC &&
+        npm test -- --ci --reporters=default --reporters=jest-junit --coverage &&
+        cd ..;
+      done
   artifacts:
     when: always
     reports:
-      junit: $SERVICE_NAME/junit.xml
+      junit: "**/junit.xml"
     paths:
-      - $SERVICE_NAME/coverage/
-      - $SERVICE_NAME/junit.xml
+      - **/coverage/
+      - **/junit.xml
     expire_in: 1 week
 
-.build_template: &build
-  stage: build
-  image: docker:27
-  services:
-    - docker:27-dind
+# -------- ESLint --------
+lint:
+  stage: lint
+  image: node:18-alpine
+  needs: ["test"]
   script:
-    - cd $SERVICE_NAME
-    - docker build -t $CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA .
-    - docker push $CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA
+    - for SVC in $SERVICES; do 
+        cd $SVC && npm run lint || true && cd ..;
+      done
 
-.scan_template: &scan
-  stage: scan
-  image: docker:27
+# -------- Build Docker Images --------
+build:
+  stage: build
+  image: docker:27-dind
   services:
     - docker:27-dind
+  needs: ["test"]
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
   script:
-    - trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/$SERVICE_NAME:$CI_COMMIT_SHORT_SHA
+    - for SVC in $SERVICES; do
+        docker build -t $CI_REGISTRY_IMAGE/$SVC:$CI_COMMIT_SHORT_SHA $SVC &&
+        docker push $CI_REGISTRY_IMAGE/$SVC:$CI_COMMIT_SHORT_SHA;
+      done
+
+# -------- Security Scan: Trivy --------
+scan:
+  stage: scan
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  needs: ["build"]
+  script:
+    - for SVC in $SERVICES; do
+        trivy image --exit-code 0 --severity HIGH,CRITICAL $CI_REGISTRY_IMAGE/$SVC:$CI_COMMIT_SHORT_SHA;
+      done
   allow_failure: true
   artifacts:
     reports:
       container_scanning: gl-container-scanning-report.json
 
-# Generate jobs dynamically per service (one job per stage per service)
-.install_jobs:
-  extends: .install_template
-  parallel:
-    matrix:
-      - SERVICE_NAME: cart-service
-      - SERVICE_NAME: product-service
-      - SERVICE_NAME: user-service
-      - SERVICE_NAME: order-service
-      - SERVICE_NAME: notification-service
-
-.test_jobs:
-  extends: .test_template
-  needs: [".install_jobs"]
-  parallel:
-    matrix:
-      - SERVICE_NAME: cart-service
-      - SERVICE_NAME: product-service
-      - SERVICE_NAME: user-service
-      - SERVICE_NAME: order-service
-      - SERVICE_NAME: notification-service
-
-.build_jobs:
-  extends: .build_template
-  needs: [".test_jobs"]
-  parallel:
-    matrix:
-      - SERVICE_NAME: cart-service
-      - SERVICE_NAME: product-service
-      - SERVICE_NAME: user-service
-      - SERVICE_NAME: order-service
-      - SERVICE_NAME: notification-service
-
-.scan_jobs:
-  extends: .scan_template
-  needs: [".build_jobs"]
-  parallel:
-    matrix:
-      - SERVICE_NAME: cart-service
-      - SERVICE_NAME: product-service
-      - SERVICE_NAME: user-service
-      - SERVICE_NAME: order-service
-      - SERVICE_NAME: notification-service
-
+# -------- Mock Deploy --------
 deploy:
   stage: deploy
+  needs: ["scan"]
   script:
-    - echo "Mock Deploy completed"
-  when: manual
-  needs: [".scan_jobs"]
+    - echo "🚀 Mock Deployment Started"
+    - echo "Containers Pulled Successfully"
+    - echo "Mock Deployment Complete"
+  when: manual  # Optional: allow manual trigger
+  only:
+    - main
